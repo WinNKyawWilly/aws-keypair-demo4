@@ -1,134 +1,104 @@
-# aws_key_pair configuration with Terraform
+# AWS Key Pair Configuration with Terraform
 
-## Summary
+This repository contains Terraform configurations to create an `aws_key_pair` resource with tags for use with EC2 instances.
 
-### Step up aws cli configuration
+## Overview
 
-```aws configure --profile <profile_name>```
-Enter Access Key
-Enter Secret Access Key
-Enter default region
-Enter output format
+- Creates an AWS key pair with a unique name using a random string
+- Supports multiple tags
+- Saves the private key on the local device
+- Uses Terraform to manage the infrastructure
 
-Next, make sure the iam user/role has the required permission policy attached to create 
+## Prerequisites
 
-### Create versions.tf
+- AWS CLI configured with appropriate permissions
+- Terraform installed
 
-use aws provider 
-- use configurated aws profile
-- use aws region as a variable
+## Setup
 
-### Create variables.tf
+1. Configure AWS CLI:
+   ```
+   aws configure --profile <profile_name>
+   ```
+   Enter your Access Key, Secret Access Key, default region, and output format.
 
-- define the aws_region variable defaulted to ap-southeast-1
+2. Ensure the IAM user/role has the required permissions to create resources.
 
-### Create keypair.tf
+## File Structure
 
-All the related code block concerning with creation of keypair written in here
+- `versions.tf`: Defines the required providers and their versions
+- `variables.tf`: Declares input variables
+- `keypair.tf`: Contains the main logic for creating the key pair
+- `terraform.tfvars`: Sets values for the defined variables
 
-- local resource with deployment_name is create
-- deployment_name is a combination of ```var.deployment_id``` and random 8 chars w/ speical chars
+## Key Components
 
-#### To create random string
-- use random_string resource
-<br>
-**Required Argument: length**
+### Random String Generation
 
-#### Create ssh key
+Uses `random_string` resource to create a unique identifier for the key pair.
 
-Use tls_private_key (Resource)
-It generates a secure private key and encodes it in PEM (RFC 1421) and OpenSSH PEM (RFC 4716) formats. 
+### SSH Key Creation
 
-- use the resource 
-- use rsa algorithm
+Utilizes `tls_private_key` resource to generate a secure private key.
 
-#### Store ssh private key in local directory
+### Local Storage of Private Key
 
-Use local_file (Resource)
-Generates a local file with the given content.
+Employs `local_file` resource to save the private key on the local machine with appropriate permissions.
 
-Arguments:<br>
-content = use the private_key_openssh from tls_private_key.<your-resource-name>
+### AWS Key Pair Resource
 
-filename = required, string
+Creates the `aws_key_pair` resource with the generated public key and specified tags.
 
-The path to the file that will be created. Missing parent directories will be created. If the file already exists, it will be overridden with the given content.<br>
-**Provisioner**
-- provisioner Block
+## Variables
 
-Provisioner to model specific actions on the local machine(local-exec) or on a remote machine in order to prepare servers or other infrastructure objects for service
+- `deployment_name` (string)
+- `create_ssh_keypair` (bool, default: false)
+- `friendly_name_prefix` (string, default: "any_string")
+- `ec2_ssh_keypair_name` (string, default: "any_string")
+- `common_tags` (map(string), default: {})
 
-Then use provisioner's local exec to excute command to change the keyfile permission to 400
+## Usage
 
-#### Create aws_key_pair resource
+1. Initialize Terraform:
+   ```
+   terraform init
+   ```
 
-1) Use count to create resource based on the value of create_aws_keypair
+2. Format and validate the configuration:
+   ```
+   terraform fmt
+   terraform validate
+   ```
 
-What is count?
-count= optional, 
-type - number 
-Total number of instances of this block.
+3. Plan the changes:
+   ```
+   terraform plan
+   ```
 
-2) create public_key - (Required) The public key material.
+4. Apply the changes:
+   ```
+   terraform apply
+   ```
 
-public_key value is the result of tls_private_key.<your-key-name>.public_key_openssh
+## Providers
 
-3) tags
-Key-value map of resource tags. 
-Tags with matching keys will overwrite those defined at the provider-level.
+- `hashicorp/aws` (5.67.0)
+- `hashicorp/random`
+- `hashicorp/tls`
+- `hashicorp/local`
 
-tags is a merge result of 3 objects
-{ Name = "${var.friendly_name_prefix}-keypair" }
-{ Name = var.ec2_ssh_keypair_name },
-var.common_tags
+## Results
 
-### define variables used
+After applying the configuration:
 
-- deployment_name(string)
-- create_ssh_keypair(bool | default false) 
-- friendly_name_prefix(string | default "any_string")
-- ec2_ssh_keypair_name (string | default "any_string")
-- common_tags (map(string) | default {})
+- A `generated` directory is created containing the SSH private key
+- An EC2 key pair resource is created in AWS with the specified name and tags
 
-### create terraform.tfvars
+## Notes
 
-set the values of variables defined in variables.tf
+- The key name format is: `<deployment_id>-<8_random_chars>-key`
+- Tags are merged from multiple sources, with `ec2_ssh_keypair_name` taking precedence for the `Name` tag
 
-### Terraform apply
+## Contributing
 
-run 
-```terraform init```
-```terraform fmt```
-```terraform validate```
-```terraform plan```
-```terraform approve```
-
-### Check terraform providers
-```terraform providers```
-Providers required by configuration:
-
-- provider[registry.terraform.io/hashicorp/aws] 5.67.0
-- provider[registry.terraform.io/hashicorp/random]
-- provider[registry.terraform.io/hashicorp/tls]
-- provider[registry.terraform.io/hashicorp/local]
-
-### Result
-total of 4 resources will be created
-1) aws_key_pair.demo_4_keypair
-2) local_file.demo4_id_rsa
-3) random_string.suffix
-4) tls_private_key.demo4_rsa
-
-After applying, 
-"generated" dir is created with ssh private key inside
-key name is the value of file_name argument in the local_file.demo4_id_rsa
-
-
-In aws console
-ec2 keypair resource is created with
-- name = deployment_id(name + 8 random chars)-key
-- merged tags
-  -   App         = "demo4-prereqs"
-  -   Environment = "demo4"
-  -   Owner       = "wnk"
-  -   Name        = overridden by ec2_ssh_keypair_name(ec2_ssh_keypair_name = "wnk-prod-keypair")
+Feel free to submit issues or pull requests if you have suggestions for improvements or find any bugs.
