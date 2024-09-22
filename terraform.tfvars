@@ -1,6 +1,6 @@
-deployment_name      = "wnk-ec2"
+deployment_name = "wnk-ec2"
 
-create_ssh_keypair   = true
+create_ssh_keypair = true
 
 friendly_name_prefix = "wnk"
 
